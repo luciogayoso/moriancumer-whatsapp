@@ -11,6 +11,7 @@ export interface Producto {
   precio: number;
   imagen_url: string;
   categoria_id: string;
+  slug: string;
   categorias?: Categoria; // Relación de Supabase
 }
 
