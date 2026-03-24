@@ -7,16 +7,18 @@ export async function GET() {
     // 1. Obtener los productos de Supabase
     const { data: productos, error } = await supabase
       .from('productos')
-      .select('*, categorias(nombre)')
-      .order('created_at', { ascending: false });
+      .select('*');
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error de Supabase:", error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     // 2. Configurar la URL base de tu sitio (cambiala por tu dominio real en producción)
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moriancumer.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moriancumer.com';
     const storageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/productos-imagenes/`;
 
-    // 3. Construir el XML en formato RSS 2.0 (el preferido de Meta)
+    // 3. Construir el XML enx formato RSS 2.0 (el preferido de Meta)
     const items = productos?.map((p) => `
       <item>
         <g:id>${p.id}</g:id>
