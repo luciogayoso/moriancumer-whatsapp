@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react'; // Paso 1: Importar useState
-import "./globals.css";
 import Link from 'next/link';
 import { ShoppingCart, Menu, X } from 'lucide-react'; // Importar X para cerrar
 import { useCarrito } from '@/context/CarritoContext';
