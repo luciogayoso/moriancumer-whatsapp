@@ -17,22 +17,38 @@ export default function CarritoPage() {
   const [isEnviando, setIsEnviando] = useState(false);
   const [zona, setZona] = useState(TABLA_ZONAS[0]);
 
-  // Solución para el error de Hydration: esperar a que el cliente monte el componente
   useEffect(() => { 
     setIsMounted(true); 
   }, []);
 
-  // Cálculos de totales
   const subtotal = carrito.reduce((acc, item) => acc + item.producto.precio * item.cantidad, 0);
   const montoEnvioGratis = 50000;
   const esEnvioGratis = subtotal >= montoEnvioGratis;
   const costoFinalEnvio = esEnvioGratis ? 0 : zona.costo;
   const totalFinal = subtotal + costoFinalEnvio;
 
-  const handleWhatsAppCheckout = () => {
+  const handleWhatsAppCheckout = async () => { // Agregamos async
     setIsEnviando(true);
     
-    // Configura tu número aquí (Ejemplo: 5491112345678)
+    // --- INTEGRACIÓN META PIXEL ---
+    try {
+      const ReactPixel = (await import('react-facebook-pixel')).default;
+      // Registramos que el usuario inició el proceso de pago
+      ReactPixel.track('InitiateCheckout', {
+        content_ids: carrito.map(item => item.producto.id),
+        contents: carrito.map(item => ({
+          id: item.producto.id,
+          quantity: item.cantidad
+        })),
+        value: totalFinal,
+        currency: 'ARS',
+        num_items: carrito.length
+      });
+    } catch (error) {
+      console.error("Error al cargar Meta Pixel:", error);
+    }
+    // ------------------------------
+
     const TELEFONO_VENTAS = "5491141652850"; 
 
     const listaProductos = carrito.map(item => 
@@ -60,12 +76,9 @@ _Hola! Me gustaría coordinar el pago y la entrega de estos productos._
     setIsEnviando(false);
   };
 
-  // Mientras no esté montado, renderizamos un esqueleto vacío para evitar errores de SSR
-  if (!isMounted) {
-    return <div className="min-h-screen bg-white" />;
-  }
+  if (!isMounted) return <div className="min-h-screen bg-white" />;
 
-  // Pantalla de Carrito Vacío
+  // ... El resto del código de renderizado (Carrito vacío y Return) se mantiene igual que tu archivo original ...
   if (carrito.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-20 text-center min-h-[60vh]">
@@ -81,6 +94,7 @@ _Hola! Me gustaría coordinar el pago y la entrega de estos productos._
 
   return (
     <div className="max-w-7xl mx-auto p-6 md:p-12">
+      {/* Tu código de renderizado original aquí... */}
       <h1 className="text-4xl font-black text-blue-900 mb-10 tracking-tighter italic uppercase">Tu Carrito</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">

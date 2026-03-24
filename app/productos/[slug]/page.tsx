@@ -1,83 +1,123 @@
-// app/productos/[slug]/page.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { notFound } from 'next/navigation';
-import { ShoppingCart, ArrowLeft } from 'lucide-react';
+import { Producto } from '@/types';
+import { useCarrito } from '@/context/CarritoContext'; // Tu context existente
+import { Loader2, ShoppingCart, ArrowLeft, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 
-interface PageProps {
-  params: Promise<{ slug: string }>;
-}
+export default function ProductoDetalle() {
+  const { slug } = useParams();
+  const { agregarAlCarrito } = useCarrito();
+  const [producto, setProducto] = useState<Producto | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default async function ProductoDetalle({ params }: PageProps) {
-  // 1. Esperamos a que los parámetros estén disponibles
-  const { slug } = await params;
+ // Dentro de tu componente ProductoDetalle
+useEffect(() => {
+  const cargarProducto = async () => {
+    const { data, error } = await supabase
+      .from('productos')
+      .select('*, categorias(nombre)')
+      .eq('slug', slug)
+      .single();
 
-  // 2. Buscamos el producto en Supabase usando el campo slug
-  const { data: producto, error } = await supabase
-    .from('productos')
-    .select('*, categorias(nombre)')
-    .eq('slug', slug)
-    .single();
+    if (!error && data) {
+      setProducto(data);
+      
+      // CARGA DINÁMICA DEL PÍXEL PARA VIEWCONTENT
+      const ReactPixel = (await import('react-facebook-pixel')).default;
+      ReactPixel.init('TU_ID_DE_DATASET_AQUÍ'); 
+      ReactPixel.track('ViewContent', {
+        content_name: data.nombre,
+        content_category: data.categorias?.nombre,
+        value: data.precio,
+        currency: 'ARS',
+      });
+    }
+    setLoading(false);
+  };
 
-  // 3. Si hay un error de base de datos o el producto no existe, enviamos al 404
-  if (error || !producto) {
-    console.error("Error buscando el producto:", error);
-    notFound();
+  if (slug) cargarProducto();
+}, [slug]);
+
+ const handleAgregar = async () => {
+  if (producto) {
+    agregarAlCarrito(producto, 1);
+    
+    // CARGA DINÁMICA PARA EL CLICK
+    const ReactPixel = (await import('react-facebook-pixel')).default;
+    ReactPixel.track('AddToCart', {
+      content_name: producto.nombre,
+      value: producto.precio,
+      currency: 'ARS',
+    });
+  }
+};
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-blue-900">
+        <Loader2 className="animate-spin" size={48} />
+      </div>
+    );
   }
 
-  // Construimos la URL de la imagen desde tu bucket de Supabase
-  const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/productos-imagenes/${producto.imagen_url}`;
+  if (!producto) return <div className="text-center py-20">Producto no encontrado.</div>;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 min-h-screen bg-white">
-      {/* Botón para regresar al catálogo principal */}
-      <Link href="/" className="flex items-center gap-2 text-slate-500 mb-8 hover:text-blue-900 transition-colors font-bold uppercase text-xs tracking-widest">
+    <div className="max-w-6xl mx-auto p-4 md:p-10">
+      <Link href="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-900 mb-8 font-bold transition-colors">
         <ArrowLeft size={20} /> Volver al catálogo
       </Link>
 
-      <div className="flex flex-col md:flex-row gap-12 lg:gap-20">
-        {/* Contenedor de Imagen de la pieza 3D */}
-        <div className="w-full md:w-1/2 bg-slate-50 rounded-[40px] p-8 md:p-16 flex items-center justify-center border border-slate-100 shadow-inner">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 bg-white p-6 md:p-12 rounded-[40px] shadow-sm border border-slate-100">
+        {/* Imagen del Producto */}
+        <div className="bg-slate-50 rounded-3xl p-8 flex items-center justify-center overflow-hidden">
           <img 
-            src={imageUrl}
+            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/productos-imagenes/${producto.imagen_url}`}
             alt={producto.nombre}
-            className="w-full h-auto max-h-[500px] object-contain drop-shadow-2xl rounded-2xl"
+            className="max-h-[400px] w-full object-contain hover:scale-105 transition-transform duration-500"
           />
         </div>
 
-        {/* Información Detallada del Producto */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center">
-          <span className="text-blue-600 font-bold text-xs uppercase tracking-[0.2em] mb-3">
-            {producto.categorias?.nombre || "General"}
+        {/* Info y Botones */}
+        <div className="flex flex-col justify-center">
+          <span className="text-blue-600 font-black uppercase tracking-[0.2em] text-xs mb-2">
+            {producto.categorias?.nombre}
           </span>
-          
-          <h1 className="text-4xl md:text-6xl font-black text-slate-900 leading-tight mb-6 uppercase">
+          <h1 className="text-3xl md:text-5xl font-black text-slate-900 leading-tight mb-4">
             {producto.nombre}
           </h1>
-          
-          <div className="h-1.5 w-24 bg-blue-900 mb-8" />
-
-          <p className="text-slate-500 text-lg leading-relaxed mb-10 max-w-lg">
-            {producto.descripcion || "Esta pieza exclusiva ha sido fabricada con tecnología de impresión 3D de alta precisión, cuidando cada detalle para ofrecer una calidad excepcional."}
+          <p className="text-slate-500 text-lg mb-8 leading-relaxed">
+            {producto.descripcion || "Detalle único fabricado con precisión en impresión 3D, ideal para fortalecer la fe en el hogar."}
           </p>
           
-          <div className="text-5xl font-black text-slate-900 mb-12">
-            ${producto.precio.toLocaleString('es-AR')}
+          <div className="mb-10">
+            <span className="text-4xl font-black text-blue-900">
+              ${producto.precio.toLocaleString('es-AR')}
+            </span>
           </div>
 
-          {/* Enlace directo a WhatsApp con mensaje predefinido */}
-          <a 
-            href={`https://wa.me/5491141652850?text=Hola! Me interesa comprar el producto: ${producto.nombre}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full bg-blue-900 text-white py-6 rounded-2xl font-bold text-xl shadow-2xl shadow-blue-200 hover:bg-blue-800 transition-all flex items-center justify-center gap-4 active:scale-[0.98]"
-          >
-            <ShoppingCart size={26} /> CONSULTAR POR WHATSAPP
-          </a>
-          
-          <p className="mt-6 text-center text-slate-400 text-sm font-medium">
-            Envíos a toda Argentina 🇦🇷
-          </p>
+          <div className="flex flex-col gap-4">
+            {/* BOTÓN PRINCIPAL: AGREGAR AL CARRITO */}
+            <button 
+              onClick={handleAgregar}
+              className="flex items-center justify-center gap-3 w-full py-5 bg-blue-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 hover:shadow-xl transition-all active:scale-95"
+            >
+              <ShoppingCart size={22} /> Agregar al carrito
+            </button>
+
+            {/* BOTÓN SECUNDARIO: CONSULTA DIRECTA */}
+            <a 
+              href={`https://wa.me/5491141652850?text=Hola! Me interesa el producto: ${producto.nombre}`}
+              target="_blank"
+              className="flex items-center justify-center gap-3 w-full py-5 bg-white text-slate-900 border-2 border-slate-100 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+            >
+              <MessageCircle size={22} className="text-green-500" /> Consultar stock
+            </a>
+          </div>
         </div>
       </div>
     </div>
