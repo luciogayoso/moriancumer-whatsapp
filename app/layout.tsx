@@ -7,6 +7,12 @@ import Navbar from "../app/components/Navbar"; // Importación ajustada a tu car
 export const metadata: Metadata = {
   title: "Moriancumer - Impresiones 3D",
   description: "Detalles únicos que fortalecen la fe",
+
+  icons: {
+    icon: "/logo.svg", // Aquí usas la ruta a tu logo en la carpeta public
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
   // CÓDIGO DE VERIFICACIÓN DE META
   verification: {
     other: {
