@@ -14,47 +14,47 @@ export default function ProductoDetalle() {
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
 
- // Dentro de tu componente ProductoDetalle
-useEffect(() => {
-  const cargarProducto = async () => {
-    const { data, error } = await supabase
-      .from('productos')
-      .select('*, categorias(nombre)')
-      .eq('slug', slug)
-      .single();
+  // Dentro de tu componente ProductoDetalle
+  useEffect(() => {
+    const cargarProducto = async () => {
+      const { data, error } = await supabase
+        .from('productos')
+        .select('*, categorias(nombre)')
+        .eq('slug', slug)
+        .single();
 
-    if (!error && data) {
-      setProducto(data);
-      
-      // CARGA DINÁMICA DEL PÍXEL PARA VIEWCONTENT
+      if (!error && data) {
+        setProducto(data);
+
+        // CARGA DINÁMICA DEL PÍXEL PARA VIEWCONTENT
+        const ReactPixel = (await import('react-facebook-pixel')).default;
+        ReactPixel.init('TU_ID_DE_DATASET_AQUÍ');
+        ReactPixel.track('ViewContent', {
+          content_name: data.nombre,
+          content_category: data.categorias?.nombre,
+          value: data.precio,
+          currency: 'ARS',
+        });
+      }
+      setLoading(false);
+    };
+
+    if (slug) cargarProducto();
+  }, [slug]);
+
+  const handleAgregar = async () => {
+    if (producto) {
+      agregarAlCarrito(producto, 1);
+
+      // CARGA DINÁMICA PARA EL CLICK
       const ReactPixel = (await import('react-facebook-pixel')).default;
-      ReactPixel.init('TU_ID_DE_DATASET_AQUÍ'); 
-      ReactPixel.track('ViewContent', {
-        content_name: data.nombre,
-        content_category: data.categorias?.nombre,
-        value: data.precio,
+      ReactPixel.track('AddToCart', {
+        content_name: producto.nombre,
+        value: producto.precio,
         currency: 'ARS',
       });
     }
-    setLoading(false);
   };
-
-  if (slug) cargarProducto();
-}, [slug]);
-
- const handleAgregar = async () => {
-  if (producto) {
-    agregarAlCarrito(producto, 1);
-    
-    // CARGA DINÁMICA PARA EL CLICK
-    const ReactPixel = (await import('react-facebook-pixel')).default;
-    ReactPixel.track('AddToCart', {
-      content_name: producto.nombre,
-      value: producto.precio,
-      currency: 'ARS',
-    });
-  }
-};
 
   if (loading) {
     return (
@@ -75,7 +75,7 @@ useEffect(() => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 bg-white p-6 md:p-12 rounded-[40px] shadow-sm border border-slate-100">
         {/* Imagen del Producto */}
         <div className="bg-slate-50 rounded-3xl p-8 flex items-center justify-center overflow-hidden">
-          <img 
+          <img
             src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/productos-imagenes/${producto.imagen_url}`}
             alt={producto.nombre}
             className="max-h-[400px] w-full object-contain hover:scale-105 transition-transform duration-500"
@@ -93,7 +93,7 @@ useEffect(() => {
           <p className="text-slate-500 text-lg mb-8 leading-relaxed">
             {producto.descripcion || "Detalle único fabricado con precisión en impresión 3D, ideal para fortalecer la fe en el hogar."}
           </p>
-          
+
           <div className="mb-10">
             <span className="text-4xl font-black text-blue-900">
               ${producto.precio.toLocaleString('es-AR')}
@@ -102,7 +102,7 @@ useEffect(() => {
 
           <div className="flex flex-col gap-4">
             {/* BOTÓN PRINCIPAL: AGREGAR AL CARRITO */}
-            <button 
+            <button
               onClick={handleAgregar}
               className="flex items-center justify-center gap-3 w-full py-5 bg-blue-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 hover:shadow-xl transition-all active:scale-95"
             >
@@ -110,12 +110,14 @@ useEffect(() => {
             </button>
 
             {/* BOTÓN SECUNDARIO: CONSULTA DIRECTA */}
-            <a 
-              href={`https://wa.me/5491141652850?text=Hola! Me interesa el producto: ${producto.nombre}`}
+            <a
+              href={`https://wa.me/5491141652850?text=${encodeURIComponent(
+                `¡Hola! Gracias por elegir Moriancumer. Recibí tu pedido de *${producto.nombre}*. ¿Preferís envío a domicilio o retiro por local?`
+              )}`}
               target="_blank"
               className="flex items-center justify-center gap-3 w-full py-5 bg-white text-slate-900 border-2 border-slate-100 rounded-2xl font-bold hover:bg-slate-50 transition-all"
             >
-              <MessageCircle size={22} className="text-green-500" /> Consultar stock
+              <MessageCircle size={22} className="text-green-500" /> Consultar por WhatsApp
             </a>
           </div>
         </div>
